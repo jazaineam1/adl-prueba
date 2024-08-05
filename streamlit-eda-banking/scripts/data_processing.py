@@ -1,19 +1,7 @@
+# data_processing.py - Script para el procesamiento de datos
+
 import pandas as pd
 import numpy as np
-import os
-
-
-df = pd.read_excel('C:/Users/nib1l/Downloads/data_prueba_ds_semisenior.xlsx')
-names = df.columns.str.split(',')
-df = df.iloc[:, 0].str.split(',', expand=True)
-df.columns = names[0]
-df.head()
-    # data_processing.py - Script para el procesamiento de datos
-
-# Importar las bibliotecas necesarias
-import pandas as pd
-import numpy as np
-import os
 
 # Función para cargar y procesar los datos
 def load_and_process_data(filepath):
@@ -27,13 +15,36 @@ def load_and_process_data(filepath):
         pd.DataFrame: DataFrame con los datos procesados.
     """
     # Cargar datos desde el archivo Excel
-    df = pd.read_excel(filepath)
+    df = pd.read_excel(filepath, engine='openpyxl')
     
-    # Separar las columnas correctamente
-    names = df.columns.str.split(',')
-    df = df.iloc[:, 0].str.split(',', expand=True)
-    df.columns = names[0]
+    # Verificar si las columnas están mal formateadas
+    if len(df.columns) == 1:
+        # Separar los nombres de las columnas utilizando el delimitador ','
+        names = df.columns[0].split(',')
+        # Dividir los datos en columnas
+        df = pd.DataFrame(df.iloc[:, 0].str.split(',', expand=True).values, columns=names)
     
+    # Reemplazar valores de cadena vacía con NaN
+    df.replace("", pd.NA, inplace=True)
+
+    return df
+
+# Función para convertir variables indicadoras
+def convert_indicators(df):
+    """
+    Convertir las variables indicadoras a tipo booleano.
+    
+    Parameters:
+        df (pd.DataFrame): DataFrame con los datos originales.
+    
+    Returns:
+        pd.DataFrame: DataFrame con las variables indicadoras convertidas.
+    """
+    indicator_cols = ['housing', 'loan', 'deposit', 'tenencia_ahorros', 'tenencia_corriente', 'tenencia_cdt', 
+                      'tenencia_tdc', 'tenencia_lb', 'tenencia_vehiculo']
+    for col in indicator_cols:
+        if col in df.columns:
+            df[col] = df[col].apply(lambda x: True if str(x).lower() == 'yes' else False)
     return df
 
 # Función para limpiar los datos
@@ -50,39 +61,32 @@ def clean_data(df):
     # Eliminar filas duplicadas
     df.drop_duplicates(inplace=True)
     
-    # Rellenar valores faltantes
+    # Identificar la columna de ID (primer columna) y excluirla del análisis
+    id_column = df.columns[0]
+    df.drop(columns=[id_column], inplace=True)
+    
+    # Rellenar valores faltantes con estrategias específicas
     df.fillna({
-        'age': df['age'].median(),  # Rellenar edades faltantes con la mediana
-        'balance': df['balance'].mean(),  # Rellenar saldo faltante con la media
-        'income': df['income'].mean()  # Rellenar ingresos faltantes con la media
+        'age': df['age'].median() if 'age' in df.columns else None,  # Rellenar edades faltantes con la mediana
+        'balance': df['balance'].mean() if 'balance' in df.columns else None,  # Rellenar saldo faltante con la media
+        'income': df['income'].mean() if 'income' in df.columns else 0  # Rellenar ingresos faltantes con la media
     }, inplace=True)
     
     # Convertir columnas a los tipos de datos correctos
-    df['age'] = df['age'].astype(int)
-    df['balance'] = df['balance'].astype(float)
-    df['income'] = df['income'].astype(float)
+    if 'age' in df.columns:
+        df['age'] = df['age'].astype(int)
+    if 'balance' in df.columns:
+        df['balance'] = df['balance'].astype(float)
+    if 'income' in df.columns:
+        df['income'] = df['income'].astype(float)
     
     # Convertir variables categóricas a tipo 'category'
-    categorical_cols = ['job', 'marital', 'education', 'default', 'housing', 'loan', 'contact', 'poutcome']
+    categorical_cols = ['job', 'marital', 'education', 'default', 'contact', 'poutcome']
     for col in categorical_cols:
-        df[col] = df[col].astype('category')
+        if col in df.columns:
+            df[col] = df[col].astype('category')
     
     return df
-
-# Función para codificar variables categóricas
-def encode_categorical(df):
-    """
-    Codificar variables categóricas utilizando one-hot encoding.
-    
-    Parameters:
-        df (pd.DataFrame): DataFrame con datos limpios.
-    
-    Returns:
-        pd.DataFrame: DataFrame con variables categóricas codificadas.
-    """
-    # Codificación one-hot de variables categóricas
-    df_encoded = pd.get_dummies(df, columns=df.select_dtypes(['category']).columns)
-    return df_encoded
 
 # Función principal para ejecutar el procesamiento de datos
 def main():
@@ -90,22 +94,24 @@ def main():
     Función principal para ejecutar el procesamiento de datos.
     """
     # Ruta del archivo de datos
-    filepath = 'C:/Users/nib1l/Downloads/data_prueba_ds_semisenior.xlsx'
+    filepath = 'C:/Users/nib1l/Documents/adl-prueba/streamlit-eda-banking/data/data_prueba_ds_semisenior.xlsx'
     
     # Cargar y procesar los datos
     df = load_and_process_data(filepath)
     
+    # Convertir variables indicadoras
+    df = convert_indicators(df)
+    
     # Limpiar los datos
     df_clean = clean_data(df)
     
-    # Codificar variables categóricas
-    df_encoded = encode_categorical(df_clean)
-    
     # Guardar el DataFrame procesado en un nuevo archivo Excel
     output_filepath = 'processed_data.xlsx'
-    df_encoded.to_excel(output_filepath, index=False)
+    df_clean.to_excel(output_filepath, index=False)
     print(f"Datos procesados y guardados en {output_filepath}")
 
 # Ejecutar la función principal
 if __name__ == "__main__":
     main()
+
+
