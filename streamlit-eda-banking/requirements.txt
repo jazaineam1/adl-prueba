@@ -5,3 +5,4 @@ seaborn
 shap
 openai
 xgboost
+pickle==4.0
