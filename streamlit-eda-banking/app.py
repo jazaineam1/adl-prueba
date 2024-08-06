@@ -40,7 +40,8 @@ try:
     model = model_data['model']
     scaler = model_data['scaler']
 except Exception as e:
-st.error(f"Error al cargar el modelo: {str(e)}")
+  st.error(f"Error al cargar el modelo: {str(e)}")
+  
 model = model_data['model']
 scaler = model_data['scaler']
 explainer = model_data['explainer']
