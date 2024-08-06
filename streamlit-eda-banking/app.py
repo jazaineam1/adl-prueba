@@ -34,9 +34,13 @@ def generar_explicacion(caracteristicas, valores_shap):
     return explicacion
 
 # Cargar el modelo y el escalador
-with open('streamlit-eda-banking/xgboost_model.pkl', 'rb') as f:
-    model_data = pickle.load(f)
-
+try:
+    with open('/mount/src/adl-prueba/streamlit-eda-banking/xgboost_model.p', 'rb') as f:
+        model_data = pickle.load(f)
+    model = model_data['model']
+    scaler = model_data['scaler']
+except Exception as e:
+st.error(f"Error al cargar el modelo: {str(e)}")
 model = model_data['model']
 scaler = model_data['scaler']
 explainer = model_data['explainer']
